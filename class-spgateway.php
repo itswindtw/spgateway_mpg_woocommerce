@@ -435,7 +435,7 @@ function spgateway_gateway_init() {
                 break;
             }
             if($_REQUEST['CVSCOMName'] != "" || $_REQUEST['StoreName'] != "" || $_REQUEST['StoreAddr'] != ""){
-                $order_id = (isset($order_id)) ? $order_id: $_REQUEST['MerchantOrderNo'];
+                $order_id = (isset($order_id)) ? $order_id: $this->decode_merchant_order_no($_REQUEST['MerchantOrderNo']);
                 $storeName = urldecode($_REQUEST['StoreName']); //店家名稱
                 $storeAddr = urldecode($_REQUEST['StoreAddr']); //店家地址
                 $name = urldecode($_REQUEST['CVSCOMName']); //取貨人姓名
@@ -509,7 +509,7 @@ function spgateway_gateway_init() {
             }
 
             //CheckValue 串接
-            $check_arr = array('MerchantID' => $merchantid, 'TimeStamp' => $timestamp, 'MerchantOrderNo' => $order_id, 'Version' => $version, 'Amt' => $amt);
+            $check_arr = array('MerchantID' => $merchantid, 'TimeStamp' => $timestamp, 'MerchantOrderNo' => $this->encode_merchant_order_no($order_id), 'Version' => $version, 'Amt' => $amt);
             //按陣列的key做升幕排序
             ksort($check_arr);
             //排序後排列組合成網址列格式
@@ -526,7 +526,7 @@ function spgateway_gateway_init() {
                 "CheckValue" => $CheckValue,
                 "TimeStamp" => $timestamp,
                 "Version" => $version,
-                "MerchantOrderNo" => $order_id,
+                "MerchantOrderNo" => $this->encode_merchant_order_no($order_id),
                 "Amt" => $amt,
                 "ItemDesc" => $itemdesc,
                 "ExpireDate" => date('Ymd', time()+intval($this->ExpireDate)*24*60*60),
@@ -565,7 +565,7 @@ function spgateway_gateway_init() {
                 'RespondType' => 'String',//回傳格式
                 'TimeStamp' => time(),//時間戳記
                 'Version' => '1.4',
-                'MerchantOrderNo' => $order->id,
+                'MerchantOrderNo' => $this->encode_merchant_order_no($order->id),
                 'Amt' => round($order->get_total()),
                 'ItemDesc' => $this->genetateItemDescByOrderItem($order),
                 "ExpireDate" => date('Ymd', time()+intval($this->ExpireDate)*24*60*60),
@@ -905,7 +905,7 @@ function spgateway_gateway_init() {
                 "Version" => "1.1",
                 "TimeStamp" => time(),
                 "TransNum" => $tradeNum,
-                "MerchantOrderNo" => $order_id,
+                "MerchantOrderNo" => $this->encode_merchant_order_no($order_id),
                 "Status" => $status,
                 "CreateStatusTime" => $createStatusTime,
                 "Category" => $category,
@@ -999,6 +999,21 @@ function spgateway_gateway_init() {
             }
         }
 
+        private function encode_merchant_order_no($order_id) {
+            $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            $rand_str = '';
+            $max = strlen($characters) - 1;
+            for ($i = 0; $i < 20; $i++) {
+                $rand_str .= $characters[mt_rand(0, $max)];
+            }
+
+            $merchant_order_no = sprintf("%s_%s", $order_id, $rand_str);
+            return substr($merchant_order_no, 0, 20);
+        }
+
+        private function decode_merchant_order_no($merchant_order_no) {
+            return explode("_", $merchant_order_no, 2)[0];
+        }
 
         private function chkOrderInvCategoryisValid($order,$category)
         {
@@ -1061,7 +1076,7 @@ function spgateway_gateway_init() {
             $re_TradeNo = $_REQUEST['TradeNo'];
             $re_Amt = $_REQUEST['Amt'];
 
-            $order = new WC_Order($re_MerchantOrderNo);
+            $order = new WC_Order($this->decode_merchant_order_no($re_MerchantOrderNo));
             $Amt = round($order->get_total());
 
 
